@@ -1,0 +1,59 @@
+@model IEnumerable<TripOrganizer.Models.Trip>
+@using TripOrganizer.Helpers
+
+@{
+    ViewData["Title"] = "Index";
+    var currentUserId = Context.Session.GetInt32("UserId");
+}
+
+<h1>Welcome to Trips Organizer</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+
+<table class="table table-bordered table-striped table-hover align-middle">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Title)</th>
+            <th>@Html.DisplayNameFor(model => model.Date)</th>
+            <th>@Html.DisplayNameFor(model => model.Destination)</th>
+            <th>@Html.DisplayNameFor(model => model.Capacity)</th>
+            <th>@Html.DisplayNameFor(model => model.Description)</th>
+            <th>Created By</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model)
+{
+    <tr>
+        <td>@Html.DisplayFor(modelItem => item.Title)</td>
+        <td>@Html.DisplayFor(modelItem => item.Date)</td>
+        <td>@Html.DisplayFor(modelItem => item.Destination)</td>
+        <td>@item.Participants.Count / @item.Capacity</td>
+        <td>@item.Description.Truncate(30)</td>
+        <td>
+            @item.Owner?.Username<br />
+            @* <strong>Owners:</strong>
+            <ul class="mb-0">
+                @foreach (var o in item.Owners)
+                {
+                    <li>@o.User.Username</li>
+                }
+            </ul> *@
+        </td>
+        <td>
+            <div class="d-flex gap-2">
+                @if (item.Owners.Any(o => o.UserId == currentUserId))
+                {
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                }
+                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Details</a>
+            </div>
+        </td>
+    </tr>
+}
+    </tbody>
+</table>

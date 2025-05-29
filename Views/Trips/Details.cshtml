@@ -1,0 +1,130 @@
+@model TripOrganizer.Models.Trip
+
+@{
+    ViewData["Title"] = "Details";
+    var currentUserId = Context.Session.GetInt32("UserId") ?? -1;
+    var isOwner = Model.Owners.Any(o => o.UserId == currentUserId);
+    var isParticipant = Model.Participants.Any(p => p.UserId == currentUserId);
+    var tripIsFull = Model.Participants.Count >= Model.Capacity;
+}
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>Trip</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">Title</dt>
+        <dd class="col-sm-10">@Model.Title</dd>
+
+        <dt class="col-sm-2">Date</dt>
+        <dd class="col-sm-10">@Model.Date</dd>
+
+        <dt class="col-sm-2">Destination</dt>
+        <dd class="col-sm-10">@Model.Destination</dd>
+
+        <dt class="col-sm-2">Capacity</dt>
+        <dd class="col-sm-10">@Model.Capacity</dd>
+
+        <dt class="col-sm-2">Description</dt>
+        <dd class="col-sm-10 p-0 text-start">
+            <div style="white-space: pre-wrap; word-break: break-word;"
+                 class="border rounded bg-light px-3 py-2 text-start">
+                @Model.Description
+            </div>
+        </dd>
+
+        <dt class="col-sm-2">Created By</dt>
+        <dd class="col-sm-10">@Model.Owner.Username</dd>
+
+        <dt class="col-sm-2">Owners</dt>
+        <dd class="col-sm-10">
+            <ul class="mb-0">
+                @foreach (var owner in Model.Owners)
+                {
+                    <li>@owner.User.Username</li>
+                }
+            </ul>
+        </dd>
+
+        <dt class="col-sm-2">Participants</dt>
+        <dd class="col-sm-10">
+            <p><strong>@Model.Participants.Count</strong> / <strong>@Model.Capacity</strong> joined</p>
+            @if (Model.Participants.Any())
+            {
+                <ul>
+                    @foreach (var p in Model.Participants)
+                    {
+                        <li>@p.User.Username</li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <span>No one has joined this trip yet.</span>
+            }
+        </dd>
+    </dl>
+</div>
+
+<div>
+    @if (isOwner)
+    {
+        <text>
+            <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
+        </text>
+    }
+
+    <a asp-action="Index">Back to List</a>
+
+    @if (!isOwner)
+    {
+        var action = isParticipant ? "Leave" : "Join";
+        var buttonClass = isParticipant ? "danger" : "success";
+        var buttonText = isParticipant ? "Leave Trip" : "Join Trip";
+
+        if (isParticipant || !tripIsFull)
+        {
+            <form asp-action="@action" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="btn btn-@buttonClass mt-2">@buttonText</button>
+            </form>
+        }
+        else
+        {
+            <button class="btn btn-secondary mt-2" disabled>Trip is full</button>
+        }
+    }
+</div>
+
+@if (isOwner)
+{
+    <h5 class="mt-4">Grant Ownership to Another User</h5>
+
+    <form asp-action="GrantOwnership" asp-controller="Trips" method="post" class="row g-2 mt-2">
+        <input type="hidden" name="tripId" value="@Model.Id" />
+        <div class="col-auto">
+            <select name="userId" class="form-select" required>
+                <option disabled selected value="">Select a user</option>
+                @foreach (var participant in Model.Participants)
+                {
+                    if (!Model.Owners.Any(o => o.UserId == participant.UserId))
+                    {
+                        <option value="@participant.UserId">@participant.User.Username</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-outline-warning">Grant Ownership</button>
+        </div>
+    </form>
+}
