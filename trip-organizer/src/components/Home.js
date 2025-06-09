@@ -1,13 +1,18 @@
-// src/components/Home.js
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
 
-function Home() {
+function Home({ user }) {
   return (
     <div>
-      <h2>Welcome to Trip Organizer</h2>
+      <h1>Welcome to Trip Organizer</h1>
+
+      {user && <p>Hello, <strong>{user.username}</strong>!</p>}
       <p>This is the homepage.</p>
-      <Link to="/trips">Browse Trips</Link> | <Link to="/login">Login</Link>
+
+      <p>
+        <Link to="/trips">Browse Trips</Link>
+        {!user && <> | <Link to="/login">Login</Link></>}
+      </p>
     </div>
   );
 }
