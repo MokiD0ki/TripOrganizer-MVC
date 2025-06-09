@@ -5,7 +5,9 @@ using System.Linq;
 
 namespace TripOrganizer.Controllers
 {
-    public class AuthController : Controller
+    [ApiController]
+    [Route("api/auth")]
+    public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
@@ -14,50 +16,30 @@ namespace TripOrganizer.Controllers
             _context = context;
         }
 
-        // GET: /Auth/Register
-        public IActionResult Register() => View();
-
-        // POST: /Auth/Register
-        [HttpPost]
-        public IActionResult Register(User user)
+        [HttpPost("register")]
+        public IActionResult Register([FromBody] User user)
         {
             if (_context.Users.Any(u => u.Username == user.Username))
             {
-                ModelState.AddModelError("Username", "Username already exists.");
-                return View();
+                return BadRequest("Username already exists.");
             }
 
             _context.Users.Add(user);
             _context.SaveChanges();
 
-            HttpContext.Session.SetInt32("UserId", user.Id);
-            HttpContext.Session.SetString("Username", user.Username);
-
-            return RedirectToAction("Index", "Trips");
+            return Ok(new { user.Id, user.Username });
         }
 
-        public IActionResult Login() => View();
-
-        [HttpPost]
-        public IActionResult Login(string username, string password)
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] User credentials)
         {
-            var user = _context.Users.FirstOrDefault(u => u.Username == username && u.Password == password);
+            var user = _context.Users.FirstOrDefault(u => u.Username == credentials.Username && u.Password == credentials.Password);
             if (user == null)
             {
-                ViewBag.Error = "Invalid credentials";
-                return View();
+                return Unauthorized("Invalid credentials.");
             }
 
-            HttpContext.Session.SetInt32("UserId", user.Id);
-            HttpContext.Session.SetString("Username", user.Username);
-
-            return RedirectToAction("Index", "Trips");
-        }
-
-        public IActionResult Logout()
-        {
-            HttpContext.Session.Clear();
-            return RedirectToAction("Login");
+            return Ok(new { user.Id, user.Username });
         }
     }
 }

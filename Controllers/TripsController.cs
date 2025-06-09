@@ -22,17 +22,23 @@ namespace TripOrganizer.Controllers
 
 
         // GET: Trips
-        public async Task<IActionResult> Index()
-        {
-            var applicationDbContext = _context.Trips
-                .Include(t => t.Owner)
-                .Include(t => t.Participants)
-                    .ThenInclude(tp => tp.User)
-                .Include(t => t.Owners)
-                    .ThenInclude(o => o.User);
+        // public async Task<IActionResult> Index()
+        // {
+        //     var applicationDbContext = _context.Trips
+        //         .Include(t => t.Owner)
+        //         .Include(t => t.Participants)
+        //             .ThenInclude(tp => tp.User)
+        //         .Include(t => t.Owners)
+        //             .ThenInclude(o => o.User);
 
-            return View(await applicationDbContext.ToListAsync());
+        //     return View(await applicationDbContext.ToListAsync());   
+        // }
+
+        public IActionResult Index()
+        {
+            return NoContent(); // or Redirect(...) or a minimal response
         }
+
 
 
         // GET: Trips/Details/5
