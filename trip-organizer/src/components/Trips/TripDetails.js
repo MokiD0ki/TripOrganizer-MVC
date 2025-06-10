@@ -83,7 +83,9 @@ function TripDetails({ user }) {
       <p><strong>Organized by:</strong> {trip.organizer || "Unknown"}</p>
 
 
-      {user && !isParticipant && <button onClick={handleJoin}>Join Trip</button>}
+      {user && !isParticipant && !isOwner && trip.participants.length < trip.capacity && (
+        <button onClick={handleJoin}>Join Trip</button>
+      )}
       {user && isParticipant && <button onClick={handleLeave}>Leave Trip</button>}
       {user && isOwner && (
         <>
