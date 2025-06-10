@@ -44,7 +44,6 @@ namespace TripOrganizer.Controllers
             return Ok(result);
         }
 
-
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTrip(int id)
         {
@@ -154,8 +153,56 @@ namespace TripOrganizer.Controllers
             var participant = await _context.TripParticipants.FirstOrDefaultAsync(p => p.TripId == id && p.UserId == dto.UserId);
             if (participant == null) return NotFound();
 
+            var trip = await _context.Trips.Include(t => t.Owners).FirstOrDefaultAsync(t => t.Id == id);
+            if (trip != null && trip.OwnerId != dto.UserId)
+            {
+                var owner = trip.Owners.FirstOrDefault(o => o.UserId == dto.UserId);
+                if (owner != null)
+                {
+                    _context.TripOwners.Remove(owner);
+                }
+            }
+
             _context.TripParticipants.Remove(participant);
             await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpPost("{tripId}/owners/add")]
+        public async Task<IActionResult> AddOwner(int tripId, [FromBody] JoinLeaveDto dto)
+        {
+            var trip = await _context.Trips
+                .Include(t => t.Owners)
+                .Include(t => t.Participants)
+                .FirstOrDefaultAsync(t => t.Id == tripId);
+
+            if (trip == null) return NotFound();
+            if (!trip.Participants.Any(p => p.UserId == dto.UserId)) return BadRequest("User is not a participant");
+            if (trip.Owners.Any(o => o.UserId == dto.UserId)) return BadRequest("User is already an owner");
+
+            _context.TripOwners.Add(new TripOwner { TripId = tripId, UserId = dto.UserId });
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpPost("{tripId}/owners/remove")]
+        public async Task<IActionResult> RemoveOwner(int tripId, [FromBody] JoinLeaveDto dto)
+        {
+            var trip = await _context.Trips
+                .Include(t => t.Owners)
+                .FirstOrDefaultAsync(t => t.Id == tripId);
+
+            if (trip == null) return NotFound();
+            if (!trip.Owners.Any(o => o.UserId == dto.UserId)) return BadRequest("User is not an owner");
+            if (trip.OwnerId == dto.UserId) return BadRequest("Cannot remove primary owner");
+
+            var ownerLink = trip.Owners.FirstOrDefault(o => o.UserId == dto.UserId);
+            if (ownerLink != null)
+            {
+                _context.TripOwners.Remove(ownerLink);
+                await _context.SaveChangesAsync();
+            }
+
             return Ok();
         }
 
