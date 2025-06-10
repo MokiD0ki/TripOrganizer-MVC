@@ -6,6 +6,7 @@ import Home from "./components/Home";
 import TripList from "./components/Trips/TripList";
 import TripDetails from "./components/Trips/TripDetails";
 import CreateTrip from "./components/Trips/CreateTrip";
+import EditTrip from "./components/Trips/EditTrip";
 import { logoutUser } from "./api";
 
 function App() {
@@ -54,6 +55,9 @@ function App() {
         <Route
           path="/trips/create"
           element={user ? <CreateTrip user={user} /> : <Navigate to="/login" replace />} />
+        <Route
+          path="/trips/:id/edit"
+          element={user ? <EditTrip user={user} /> : <Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

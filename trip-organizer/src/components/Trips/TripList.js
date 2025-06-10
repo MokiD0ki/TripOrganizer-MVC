@@ -29,8 +29,7 @@ function TripList({ user }) {
           <li key={trip.id}>
             <Link to={`/trips/${trip.id}`}>
               {trip.title} - {trip.destination} | 
-              {trip.currentCount}/{trip.capacity} joined | 
-              Owner: {trip.owner}
+              {trip.participants?.length}/{trip.capacity} joined | Owner: {trip.owners?.map(o => o.username).join(', ')}
             </Link>
           </li>
         ))}

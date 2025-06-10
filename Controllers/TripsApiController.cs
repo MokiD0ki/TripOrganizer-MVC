@@ -5,8 +5,8 @@ using TripOrganizer.Models;
 
 namespace TripOrganizer.Controllers
 {
-    [ApiController]
     [Route("api/trips")]
+    [ApiController]
     public class TripsApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -17,32 +17,41 @@ namespace TripOrganizer.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<object>>> GetTrips()
+        public async Task<IActionResult> GetTrips()
         {
             var trips = await _context.Trips
-                .Include(t => t.Participants)
+                .Include(t => t.Participants).ThenInclude(p => p.User)
+                .Include(t => t.Owners).ThenInclude(o => o.User)
                 .Include(t => t.Owner)
-                .Select(t => new {
-                    t.Id,
-                    t.Title,
-                    t.Destination,
-                    t.Date,
-                    t.Capacity,
-                    CurrentCount = t.Participants.Count,
-                    Owner = t.Owner.Username
-                })
                 .ToListAsync();
 
-            return Ok(trips);
+            var result = trips.Select(t => new
+            {
+                t.Id,
+                t.Title,
+                t.Destination,
+                t.Capacity,
+                Participants = t.Participants
+                    .Where(p => p.User != null)
+                    .Select(p => new { p.User.Id, p.User.Username })
+                    .ToList(),
+                Owners = t.Owners
+                    .Where(o => o.User != null)
+                    .Select(o => new { o.User.Id, o.User.Username })
+                    .ToList()
+            });
+
+            return Ok(result);
         }
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTrip(int id)
         {
             var trip = await _context.Trips
-                .Include(t => t.Participants)
-                    .ThenInclude(tp => tp.User)
+                .Include(t => t.Participants).ThenInclude(tp => tp.User)
                 .Include(t => t.Owner)
+                .Include(t => t.Owners).ThenInclude(o => o.User)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (trip == null)
@@ -56,38 +65,103 @@ namespace TripOrganizer.Controllers
                 trip.Date,
                 trip.Capacity,
                 trip.Description,
-                Participants = trip.Participants
-                    .Where(p => p.User != null)
-                    .Select(p => p.User.Username)
-                    .ToList(),
-                Organizer = trip.Owner?.Username
+                Organizer = trip.Owner?.Username,
+                Owners = trip.Owners.Where(o => o.User != null).Select(o => new { o.User.Id, o.User.Username }).ToList(),
+                Participants = trip.Participants.Where(p => p.User != null).Select(p => new { p.User.Id, p.User.Username }).ToList()
             };
 
             return Ok(result);
         }
-        
-        [HttpPost]
-        public async Task<IActionResult> CreateTrip([FromBody] Trip trip)
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTrip(int id, [FromBody] Trip updatedTrip)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (id != updatedTrip.Id)
+                return BadRequest();
 
-            // Set the owner to the currently logged-in user (in-memory)
-            if (trip.OwnerId == 0)
-                return BadRequest("Missing OwnerId.");
+            var existingTrip = await _context.Trips.FindAsync(id);
+            if (existingTrip == null)
+                return NotFound();
 
-            _context.Trips.Add(trip);
+            updatedTrip.OwnerId = existingTrip.OwnerId;
+
+            existingTrip.Title = updatedTrip.Title;
+            existingTrip.Destination = updatedTrip.Destination;
+            existingTrip.Date = updatedTrip.Date;
+            existingTrip.Capacity = updatedTrip.Capacity;
+            existingTrip.Description = updatedTrip.Description;
+
             await _context.SaveChangesAsync();
 
-            // Add to TripOwners table
+            return NoContent();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateTrip([FromBody] Trip newTrip)
+        {
+            _context.Trips.Add(newTrip);
+            await _context.SaveChangesAsync();
+
             _context.TripOwners.Add(new TripOwner
             {
-                TripId = trip.Id,
-                UserId = trip.OwnerId
+                TripId = newTrip.Id,
+                UserId = newTrip.OwnerId
             });
             await _context.SaveChangesAsync();
 
-            return Ok(new { trip.Id });
+            return CreatedAtAction(nameof(GetTrip), new { id = newTrip.Id }, newTrip);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTrip(int id)
+        {
+            var trip = await _context.Trips
+                .Include(t => t.Participants)
+                .Include(t => t.Owners)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (trip == null)
+                return NotFound();
+
+            _context.TripParticipants.RemoveRange(trip.Participants);
+            _context.TripOwners.RemoveRange(trip.Owners);
+            _context.Trips.Remove(trip);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpPost("{id}/join")]
+        public async Task<IActionResult> JoinTrip(int id, [FromBody] JoinLeaveDto dto)
+        {
+            var trip = await _context.Trips.Include(t => t.Participants).FirstOrDefaultAsync(t => t.Id == id);
+            if (trip == null) return NotFound();
+
+            if (trip.Participants.Any(p => p.UserId == dto.UserId))
+                return BadRequest("Already joined.");
+
+            if (trip.Participants.Count >= trip.Capacity)
+                return BadRequest("Trip is full.");
+
+            _context.TripParticipants.Add(new TripParticipant { TripId = id, UserId = dto.UserId });
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        [HttpPost("{id}/leave")]
+        public async Task<IActionResult> LeaveTrip(int id, [FromBody] JoinLeaveDto dto)
+        {
+            var participant = await _context.TripParticipants.FirstOrDefaultAsync(p => p.TripId == id && p.UserId == dto.UserId);
+            if (participant == null) return NotFound();
+
+            _context.TripParticipants.Remove(participant);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        public class JoinLeaveDto
+        {
+            public int UserId { get; set; }
         }
     }
 }
