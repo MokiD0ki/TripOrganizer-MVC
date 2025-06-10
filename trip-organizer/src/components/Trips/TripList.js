@@ -1,33 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import API from '../../api';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import API from "../../api";
 
-function TripList() {
+function TripList({ user }) {
   const [trips, setTrips] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    API.get('/trips')
-      .then(response => {
-        console.log("✅ API response:", response);
+    const fetchTrips = async () => {
+      try {
+        const response = await API.get("/trips");
+        setTrips(response.data);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load trips.");
+      }
+    };
 
-        if (Array.isArray(response.data)) {
-          setTrips(response.data);
-        } else {
-          console.error('❌ Unexpected response shape:', response.data);
-        }
-      })
-      .catch(error => {
-        console.error('❌ Failed to fetch trips:', error);
-      });
+    fetchTrips();
   }, []);
 
   return (
     <div>
       <h2>Available Trips</h2>
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <ul>
-        {trips.map(trip => (
+        {trips.map((trip) => (
           <li key={trip.id}>
-            <Link to={`/trips/${trip.id}`}>{trip.title} - {trip.destination}</Link>
+            <Link to={`/trips/${trip.id}`}>
+              {trip.title} - {trip.destination} | 
+              {trip.currentCount}/{trip.capacity} joined | 
+              Owner: {trip.owner}
+            </Link>
           </li>
         ))}
       </ul>

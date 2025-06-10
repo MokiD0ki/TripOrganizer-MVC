@@ -5,7 +5,8 @@ import Register from "./components/Auth/Register";
 import Home from "./components/Home";
 import TripList from "./components/Trips/TripList";
 import TripDetails from "./components/Trips/TripDetails";
-import { logoutUser} from "./api";
+import CreateTrip from "./components/Trips/CreateTrip";
+import { logoutUser } from "./api";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -29,6 +30,7 @@ function App() {
         {user ? (
           <>
             <Link to="/trips">Trips</Link>{" "}
+            <Link to="/trips/create">Create Trip</Link>{" "}
             <button onClick={handleLogout}>Logout</button>
           </>
         ) : (
@@ -49,6 +51,9 @@ function App() {
         <Route
           path="/trips/:id"
           element={user ? <TripDetails user={user} /> : <Navigate to="/login" replace />} />
+        <Route
+          path="/trips/create"
+          element={user ? <CreateTrip user={user} /> : <Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );
