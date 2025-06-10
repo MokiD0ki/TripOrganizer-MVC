@@ -2,16 +2,33 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'https://localhost:7032/api',
-  withCredentials: true,
+  withCredentials: false,
 });
 
-// Axios-based login function
+// Add JWT token to every request if available
+API.interceptors.request.use(config => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Login function expecting { token, user } in response
 export async function loginUser(credentials) {
   const response = await API.post('/auth/login', credentials);
-  return response.data; // must be { id, username }
+  const { token, user } = response.data;
+
+  // Save token and user info
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user));
+
+  return { token, user };
 }
 
+// Logout function
 export function logoutUser() {
+  localStorage.removeItem("token");
   localStorage.removeItem("user");
 }
 

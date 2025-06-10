@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using TripOrganizer.Data;
 using TripOrganizer.Models;
 
@@ -72,17 +73,26 @@ namespace TripOrganizer.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTrip(int id, [FromBody] Trip updatedTrip)
         {
             if (id != updatedTrip.Id)
                 return BadRequest();
 
-            var existingTrip = await _context.Trips.FindAsync(id);
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type.EndsWith("nameidentifier"));
+            if (userIdClaim == null) return Unauthorized();
+            int userId = int.Parse(userIdClaim.Value);
+
+            var existingTrip = await _context.Trips
+                .Include(t => t.Owners)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
             if (existingTrip == null)
                 return NotFound();
 
-            updatedTrip.OwnerId = existingTrip.OwnerId;
+            if (!existingTrip.Owners.Any(o => o.UserId == userId))
+                return Forbid();
 
             existingTrip.Title = updatedTrip.Title;
             existingTrip.Destination = updatedTrip.Destination;
@@ -95,6 +105,7 @@ namespace TripOrganizer.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateTrip([FromBody] Trip newTrip)
         {
@@ -111,9 +122,14 @@ namespace TripOrganizer.Controllers
             return CreatedAtAction(nameof(GetTrip), new { id = newTrip.Id }, newTrip);
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTrip(int id)
         {
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type.EndsWith("nameidentifier"));
+            if (userIdClaim == null) return Unauthorized();
+            int userId = int.Parse(userIdClaim.Value);
+
             var trip = await _context.Trips
                 .Include(t => t.Participants)
                 .Include(t => t.Owners)
@@ -121,6 +137,9 @@ namespace TripOrganizer.Controllers
 
             if (trip == null)
                 return NotFound();
+
+            if (!trip.Owners.Any(o => o.UserId == userId))
+                return Forbid();
 
             _context.TripParticipants.RemoveRange(trip.Participants);
             _context.TripOwners.RemoveRange(trip.Owners);
@@ -130,6 +149,7 @@ namespace TripOrganizer.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpPost("{id}/join")]
         public async Task<IActionResult> JoinTrip(int id, [FromBody] JoinLeaveDto dto)
         {
@@ -147,6 +167,7 @@ namespace TripOrganizer.Controllers
             return Ok();
         }
 
+        [Authorize]
         [HttpPost("{id}/leave")]
         public async Task<IActionResult> LeaveTrip(int id, [FromBody] JoinLeaveDto dto)
         {
@@ -168,6 +189,7 @@ namespace TripOrganizer.Controllers
             return Ok();
         }
 
+        [Authorize]
         [HttpPost("{tripId}/owners/add")]
         public async Task<IActionResult> AddOwner(int tripId, [FromBody] JoinLeaveDto dto)
         {
@@ -185,6 +207,7 @@ namespace TripOrganizer.Controllers
             return Ok();
         }
 
+        [Authorize]
         [HttpPost("{tripId}/owners/remove")]
         public async Task<IActionResult> RemoveOwner(int tripId, [FromBody] JoinLeaveDto dto)
         {

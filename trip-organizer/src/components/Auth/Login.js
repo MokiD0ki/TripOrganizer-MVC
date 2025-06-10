@@ -1,4 +1,3 @@
-// Login.js
 import React, { useState } from "react";
 import { loginUser } from "../../api";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +14,12 @@ function Login({ setUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const user = await loginUser(form);
+      const response = await loginUser(form);
+
+      // Expecting response to have: { token, user }
+      const { token, user } = response;
+
+      localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
       navigate("/");

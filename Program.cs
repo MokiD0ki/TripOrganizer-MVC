@@ -1,9 +1,30 @@
 using TripOrganizer.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var secretKey = jwtSettings.GetValue<string>("Key");
 
-// Add services to the container.
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = jwtSettings.GetValue<string>("Issuer"),
+            ValidAudience = jwtSettings.GetValue<string>("Audience"),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        };
+    });
+
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -14,8 +35,8 @@ builder.Services.AddCors(options =>
               .AllowCredentials(); // this is the critical part
     });
 });
-builder.Services.AddDistributedMemoryCache(); 
-builder.Services.AddSession();
+
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -39,7 +60,6 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-app.UseSession();
 app.UseRouting();
 
 app.UseCors("AllowReactApp");
