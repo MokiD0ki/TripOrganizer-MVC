@@ -1,6 +1,14 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../../api';
+import {
+  Container,
+  Card,
+  ListGroup,
+  Button,
+  Alert,
+  Badge,
+} from 'react-bootstrap';
 
 function TripDetails({ user }) {
   const { id } = useParams();
@@ -8,6 +16,7 @@ function TripDetails({ user }) {
   const [trip, setTrip] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
+  const [error, setError] = useState('');
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -15,9 +24,10 @@ function TripDetails({ user }) {
       const tripData = response.data;
       setTrip(tripData);
       setIsOwner(tripData.owners?.some(owner => owner.id === user?.id));
-      setIsParticipant(tripData.participants?.some(participant => participant.id === user?.id));
-    } catch (error) {
-      console.error('Error fetching trip details:', error);
+      setIsParticipant(tripData.participants?.some(p => p.id === user?.id));
+    } catch (err) {
+      console.error('Error fetching trip:', err);
+      setError('Failed to load trip.');
     }
   }, [id, user]);
 
@@ -29,8 +39,8 @@ function TripDetails({ user }) {
     try {
       await API.post(`/trips/${trip.id}/join`, { userId: parseInt(user.id) });
       await fetchTrip();
-    } catch (error) {
-      console.error('Failed to join trip:', error);
+    } catch (err) {
+      console.error('Failed to join trip:', err);
     }
   };
 
@@ -38,8 +48,8 @@ function TripDetails({ user }) {
     try {
       await API.post(`/trips/${trip.id}/leave`, { userId: parseInt(user.id) });
       await fetchTrip();
-    } catch (error) {
-      console.error('Failed to leave trip:', error);
+    } catch (err) {
+      console.error('Failed to leave trip:', err);
     }
   };
 
@@ -47,8 +57,8 @@ function TripDetails({ user }) {
     try {
       await API.post(`/trips/${trip.id}/owners/add`, { userId });
       await fetchTrip();
-    } catch (error) {
-      console.error('Failed to add owner:', error);
+    } catch (err) {
+      console.error('Failed to add owner:', err);
     }
   };
 
@@ -56,8 +66,8 @@ function TripDetails({ user }) {
     try {
       await API.post(`/trips/${trip.id}/owners/remove`, { userId });
       await fetchTrip();
-    } catch (error) {
-      console.error('Failed to remove owner:', error);
+    } catch (err) {
+      console.error('Failed to remove owner:', err);
     }
   };
 
@@ -69,52 +79,84 @@ function TripDetails({ user }) {
     try {
       await API.delete(`/trips/${trip.id}`);
       navigate('/trips');
-    } catch (error) {
-      console.error('Failed to delete trip:', error);
+    } catch (err) {
+      console.error('Failed to delete trip:', err);
     }
   };
 
-  if (!trip) return <div>Loading...</div>;
+  if (!trip) return <p>Loading...</p>;
 
   return (
-    <div>
-      <h2>{trip.title}</h2>
-      <p><strong>Destination:</strong> {trip.destination}</p>
-      <p><strong>Date:</strong> {trip.date}</p>
-      <p><strong>Description:</strong> {trip.description}</p>
-      <p><strong>Capacity:</strong> {trip.participants?.length}/{trip.capacity}</p>
-      <p><strong>Owner(s):</strong> {trip.owners?.map(o => o.username).join(', ')}</p>
-      <p><strong>Participants:</strong></p>
-      <ul>
-        {trip.participants?.length > 0
-          ? trip.participants.map((p, index) => (
-              <li key={index}>
-                {p.username}
-                {isOwner && user.id !== p.id && (
-                  trip.owners?.some(o => o.id === p.id) ? (
-                    <button onClick={() => handleRemoveOwner(p.id)}>Remove Ownership</button>
-                  ) : (
-                    <button onClick={() => handleAddOwner(p.id)}>Make Owner</button>
-                  )
-                )}
-              </li>
-            ))
-          : <li>No participants</li>}
-      </ul>
+    <Container className="mt-5">
+      <Card>
+        <Card.Body>
+          <Card.Title>{trip.title}</Card.Title>
+          {error && <Alert variant="danger">{error}</Alert>}
 
-      <p><strong>Organized by:</strong> {trip.organizer || "Unknown"}</p>
+          <p><strong>Destination:</strong> {trip.destination}</p>
+          <p><strong>Date:</strong> {trip.date}</p>
+          <p><strong>Description:</strong> {trip.description}</p>
+          <p>
+            <strong>Capacity:</strong>{' '}
+            <Badge bg="info">
+              {trip.participants?.length}/{trip.capacity}
+            </Badge>
+          </p>
+          <p>
+            <strong>Organized by:</strong>{' '}
+            {trip.organizer || "Unknown"}
+          </p>
 
-      {user && !isParticipant && !isOwner && trip.participants.length < trip.capacity && (
-        <button onClick={handleJoin}>Join Trip</button>
-      )}
-      {user && isParticipant && <button onClick={handleLeave}>Leave Trip</button>}
-      {user && isOwner && (
-        <>
-          <button onClick={handleEdit}>Edit Trip</button>
-          <button onClick={handleDelete}>Delete Trip</button>
-        </>
-      )}
-    </div>
+          <hr />
+          <h5>Participants</h5>
+          <ListGroup>
+            {trip.participants?.length > 0 ? (
+              trip.participants.map((p) => (
+                <ListGroup.Item key={p.id} className="d-flex justify-content-between align-items-center">
+                  {p.username}
+                  {isOwner && user.id !== p.id && (
+                    trip.owners?.some(o => o.id === p.id) ? (
+                      <Button variant="outline-danger" size="sm" onClick={() => handleRemoveOwner(p.id)}>
+                        Remove Owner
+                      </Button>
+                    ) : (
+                      <Button variant="outline-success" size="sm" onClick={() => handleAddOwner(p.id)}>
+                        Make Owner
+                      </Button>
+                    )
+                  )}
+                </ListGroup.Item>
+              ))
+            ) : (
+              <ListGroup.Item>No participants yet</ListGroup.Item>
+            )}
+          </ListGroup>
+
+          <div className="mt-4">
+            {user && !isParticipant && !isOwner && trip.participants.length < trip.capacity && (
+              <Button variant="primary" onClick={handleJoin} className="me-2">
+                Join Trip
+              </Button>
+            )}
+            {user && isParticipant && (
+              <Button variant="warning" onClick={handleLeave} className="me-2">
+                Leave Trip
+              </Button>
+            )}
+            {user && isOwner && (
+              <>
+                <Button variant="secondary" onClick={handleEdit} className="me-2">
+                  Edit
+                </Button>
+                <Button variant="danger" onClick={handleDelete}>
+                  Delete
+                </Button>
+              </>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }
 

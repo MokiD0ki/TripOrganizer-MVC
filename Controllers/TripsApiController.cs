@@ -32,6 +32,7 @@ namespace TripOrganizer.Controllers
                 t.Title,
                 t.Destination,
                 t.Capacity,
+                Organizer = t.Owner?.Username,
                 Participants = t.Participants
                     .Where(p => p.User != null)
                     .Select(p => new { p.User.Id, p.User.Username })

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
+import { Container, Form, Button, Alert, Card } from "react-bootstrap";
 
 function CreateTrip({ user }) {
   const [trip, setTrip] = useState({
@@ -8,7 +9,7 @@ function CreateTrip({ user }) {
     destination: "",
     date: "",
     capacity: 1,
-    description: ""
+    description: "",
   });
 
   const [error, setError] = useState("");
@@ -30,65 +31,73 @@ function CreateTrip({ user }) {
   };
 
   return (
-    <div>
-      <h2>Create a New Trip</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Title:</label>
-          <input
-            name="title"
-            value={trip.title}
-            onChange={handleChange}
-            required
-          />
-        </div>
+    <Container className="mt-5" style={{ maxWidth: "600px" }}>
+      <Card>
+        <Card.Body>
+          <h2 className="mb-4">Create a New Trip</h2>
+          {error && <Alert variant="danger">{error}</Alert>}
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Title</Form.Label>
+              <Form.Control
+                name="title"
+                value={trip.title}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
 
-        <div>
-          <label>Destination:</label>
-          <input
-            name="destination"
-            value={trip.destination}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Destination</Form.Label>
+              <Form.Control
+                name="destination"
+                value={trip.destination}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
 
-        <div>
-          <label>Date:</label>
-          <input
-            name="date"
-            type="date"
-            value={trip.date}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Date</Form.Label>
+              <Form.Control
+                type="date"
+                name="date"
+                value={trip.date}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
 
-        <div>
-          <label>Capacity:</label>
-          <input
-            name="capacity"
-            type="number"
-            min="1"
-            value={trip.capacity}
-            onChange={handleChange}
-            required
-          />
-        </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Capacity</Form.Label>
+              <Form.Control
+                type="number"
+                min="1"
+                name="capacity"
+                value={trip.capacity}
+                onChange={handleChange}
+                required
+              />
+            </Form.Group>
 
-        <div>
-          <label>Description:</label>
-          <textarea
-            name="description"
-            value={trip.description}
-            onChange={handleChange}
-          />
-        </div>
+            <Form.Group className="mb-3">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                name="description"
+                value={trip.description}
+                onChange={handleChange}
+              />
+            </Form.Group>
 
-        <button type="submit">Create Trip</button>
-      </form>
-    </div>
+            <Button type="submit" variant="primary" className="w-100">
+              Create Trip
+            </Button>
+          </Form>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 }
 

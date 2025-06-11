@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:3000") // Do not use AllowAnyOrigin with credentials!
+        policy.WithOrigins("http://localhost:3000", "https://TripOrganizer.com") // Do not use AllowAnyOrigin with credentials!
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // this is the critical part
